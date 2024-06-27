@@ -11,6 +11,7 @@ import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import PandasTools
+from rdkit.Chem import rdFingerprintGenerator
 from gensim.models import word2vec
 import timeit
 from joblib import Parallel, delayed
@@ -95,8 +96,16 @@ def mol2sentence(mol, radius):
         Sentence (list) with identifiers from all radii combined
     """
     radii = list(range(int(radius) + 1))
-    info = {}
-    _ = AllChem.GetMorganFingerprint(mol, radius, bitInfo=info)  # info: dictionary identifier, atom_idx, radius
+
+    # info = {}
+    # _ = AllChem.GetMorganFingerprint(mol, radius, bitInfo = info)  # info: dictionary identifier, atom_idx, radius
+
+    # https://greglandrum.github.io/rdkit-blog/posts/2023-01-18-fingerprint-generator-tutorial.html
+    mfp1gen = rdFingerprintGenerator.GetMorganGenerator(radius = radius)
+    ao = rdFingerprintGenerator.AdditionalOutput()
+    ao.AllocateBitInfoMap()
+    fp = mfp1gen.GetFingerprint(mol, additionalOutput=ao)
+    info = ao.GetBitInfoMap()
 
     mol_atoms = [a.GetIdx() for a in mol.GetAtoms()]
     dict_atoms = {x: {r: None for r in radii} for x in mol_atoms}
@@ -147,8 +156,15 @@ def mol2alt_sentence(mol, radius):
     combined
     """
     radii = list(range(int(radius) + 1))
-    info = {}
-    _ = AllChem.GetMorganFingerprint(mol, radius, bitInfo=info)  # info: dictionary identifier, atom_idx, radius
+    # info = {}
+    # _ = AllChem.GetMorganFingerprint(mol, radius, bitInfo=info)  # info: dictionary identifier, atom_idx, radius
+
+    # https://greglandrum.github.io/rdkit-blog/posts/2023-01-18-fingerprint-generator-tutorial.html
+    mfp1gen = rdFingerprintGenerator.GetMorganGenerator(radius = radius)
+    ao = rdFingerprintGenerator.AdditionalOutput()
+    ao.AllocateBitInfoMap()
+    fp = mfp1gen.GetFingerprint(mol, additionalOutput=ao)
+    info = ao.GetBitInfoMap()
 
     mol_atoms = [a.GetIdx() for a in mol.GetAtoms()]
     dict_atoms = {x: {r: None for r in radii} for x in mol_atoms}
@@ -422,18 +438,21 @@ def sentences2vec(sentences, model, unseen=None):
     -------
     np.array
     """
-    keys = set(model.wv.vocab.keys())
+    # keys = set(model.wv.vocab.keys())
     vec = []
     if unseen:
         unseen_vec = model.wv.word_vec(unseen)
 
     for sentence in sentences:
         if unseen:
-            vec.append(sum([model.wv.word_vec(y) if y in set(sentence) & keys
+            # vec.append(sum([model.wv.word_vec(y) if y in set(sentence) & keys
+            vec.append(sum([model.wv.word_vec(model.wv.index_to_key[int(y)]) if y in set(sentence)
                        else unseen_vec for y in sentence]))
         else:
-            vec.append(sum([model.wv.word_vec(y) for y in sentence 
-                            if y in set(sentence) & keys]))
+            # vec.append(sum([model.wv.word_vec(y) for y in sentence 
+            #                 if y in set(sentence) & keys]))
+            vec.append(sum([model.wv.word_vec(model.wv.index_to_key[int(y)]) for y in sentence 
+                            if y in set(sentence)]))
     return np.array(vec)
 
 

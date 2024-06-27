@@ -124,8 +124,16 @@ def depict_identifier(mol, identifier, radius, useFeatures=False, **kwargs):
     IPython.display.SVG
     """
     identifier = int(identifier)
-    info = {}
-    AllChem.GetMorganFingerprint(mol, radius, bitInfo=info, useFeatures=useFeatures)
+    # info = {}
+    # AllChem.GetMorganFingerprint(mol, radius, bitInfo=info, useFeatures=useFeatures)
+    
+    # https://greglandrum.github.io/rdkit-blog/posts/2023-01-18-fingerprint-generator-tutorial.html
+    mfp1gen = rdFingerprintGenerator.GetMorganGenerator(radius = radius)
+    ao = rdFingerprintGenerator.AdditionalOutput()
+    ao.AllocateBitInfoMap()
+    fp = mfp1gen.GetFingerprint(mol, additionalOutput=ao)
+    info = ao.GetBitInfoMap()
+
     if identifier in info.keys():
         atoms, radii = zip(*info[identifier])
         return depict_atoms(mol, atoms, radii, **kwargs)
